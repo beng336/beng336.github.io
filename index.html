@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KT Connect Check-In Redesign</title>
+<meta name="description" content="Clickable prototype for a KT Connect check-in redesign: a structured morning handoff from parents to the care team. Concept by Brian Eng.">
+<style>
+  :root {
+    --purple: #9659ad;
+    --purple-dark: #7d4592;
+    --kiosk: #5b3192;
+    --kiosk-2: #6e44a6;
+    --pink: #d61f5c;
+    --pink-dark: #b8174d;
+    --blue: #2e86c1;
+    --green: #43a047;
+    --green-bg: #e8f5e9;
+    --red: #d9534f;
+    --bg: #e9e9ec;
+    --card: #ffffff;
+    --text: #222;
+    --muted: #6b6b73;
+    --line: #dcdce1;
+    --ai: #6a4bd6;
+    --ai-bg: #efeafd;
+    --page: #2b2233;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, Roboto, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: var(--page);
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; cursor: pointer; }
+
+  /* ---------- Desktop: phone frame + notes panel ---------- */
+  .stage {
+    min-height: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 40px;
+    padding: 32px 16px;
+  }
+  .phone {
+    position: relative;
+    width: 390px; height: 844px;
+    border-radius: 48px;
+    border: 12px solid #111;
+    background: var(--bg);
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,.45);
+    display: flex; flex-direction: column;
+  }
+  .statusbar {
+    height: 44px; flex: none;
+    background: var(--purple); color: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 26px; font-size: 14px; font-weight: 600;
+  }
+  .notes {
+    width: 340px; color: #eee; font-size: 15px; line-height: 1.5;
+  }
+  .notes h1 { font-size: 20px; margin: 0 0 4px; color: #fff; }
+  .notes .by { color: #b9a9c9; margin: 0 0 24px; font-size: 14px; }
+  .notes .tag {
+    display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .04em;
+    background: #4a3a5a; color: #e6d7f2; border-radius: 4px; padding: 2px 8px; margin-bottom: 8px;
+  }
+  .notes .note-title { font-size: 17px; font-weight: 600; color: #fff; margin: 0 0 8px; }
+  .notes p { margin: 0 0 12px; color: #d8d0de; }
+  .notes .restart { color: #c8a6e0; background: none; border: 0; padding: 0; text-decoration: underline; }
+
+  /* ---------- Mobile: full-screen app ---------- */
+  .info-btn { display: none; }
+  @media (max-width: 760px) {
+    body { background: var(--bg); }
+    .stage { padding: 0; display: block; }
+    .phone {
+      width: 100%; height: 100vh; height: 100dvh;
+      border: 0; border-radius: 0; box-shadow: none;
+    }
+    .statusbar { display: none; }
+    .notes {
+      display: none;
+      position: fixed; inset: auto 12px 12px 12px; width: auto; z-index: 50;
+      background: rgba(30,22,38,.96); border-radius: 14px; padding: 16px 18px;
+      max-height: 60vh; overflow: auto;
+    }
+    .notes.open { display: block; }
+    .notes h1, .notes .by { display: none; }
+    .info-btn { display: flex; }
+  }
+
+  /* ---------- App chrome ---------- */
+  .screen { display: none; flex: 1; flex-direction: column; min-height: 0; position: relative; }
+  .screen.active { display: flex; }
+  .appbar {
+    flex: none; height: 56px; background: var(--purple); color: #fff;
+    display: flex; align-items: center; padding: 0 8px; gap: 8px;
+  }
+  .appbar .title { font-size: 18px; flex: 1; }
+  .appbar .center-title { flex: 1; text-align: center; font-size: 19px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .icon-btn {
+    width: 40px; height: 40px; border: 0; background: none; color: #fff;
+    display: flex; align-items: center; justify-content: center; border-radius: 50%;
+  }
+  .info-btn { font-weight: 700; font-size: 15px; border: 2px solid rgba(255,255,255,.8); width: 26px; height: 26px; border-radius: 50%; margin-right: 6px; background: none; color: #fff; align-items: center; justify-content: center; padding: 0; }
+  .body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .pad { padding: 16px; }
+  .footer { flex: none; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid var(--line); }
+
+  .btn {
+    display: block; width: 100%; border-radius: 4px; padding: 13px 16px; font-size: 16px;
+    border: 1.5px solid var(--pink); background: var(--pink); color: #fff; text-align: center;
+  }
+  .btn:active { background: var(--pink-dark); }
+  .btn.outline { background: #fff; color: var(--purple); border-color: var(--purple); }
+  .btn.ghost { background: none; border: 0; color: var(--purple); padding: 10px; font-size: 15px; }
+  .btn[disabled] { opacity: .45; }
+  .btn + .btn { margin-top: 8px; }
+
+  .card { background: var(--card); border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .greeting { text-align: center; font-size: 20px; padding: 18px 16px 4px; }
+
+  /* Home */
+  .home-date { color: var(--blue); font-weight: 700; font-size: 17px; padding: 14px 14px 6px; }
+  .child-row { display: flex; align-items: center; gap: 16px; padding: 10px 14px 18px; border-bottom: 6px solid var(--bg); background: #fff; }
+  .avatar {
+    width: 72px; height: 72px; border-radius: 50%; flex: none;
+    background: linear-gradient(135deg, #f3b37a, #e0795a); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 600;
+  }
+  .avatar.sm { width: 40px; height: 40px; font-size: 18px; }
+  .avatar.alt { background: linear-gradient(135deg, #7fc6e8, #4f8fd1); }
+  .child-name { font-size: 18px; line-height: 1.25; }
+  .pill { display: inline-block; font-size: 12px; padding: 3px 12px; border-radius: 999px; margin-top: 6px; }
+  .pill.green { background: var(--green); color: #fff; }
+  .pill.grey { background: #e3e3e8; color: #555; }
+  .pill.ai { background: var(--ai-bg); color: var(--ai); font-weight: 600; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px; background: var(--bg); }
+  .tile {
+    background: #fff; border: 0; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,.12);
+    display: flex; flex-direction: column; align-items: center; padding: 12px 6px 10px; min-height: 92px;
+  }
+  .tile .ic { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .tile .lbl { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; width: 80%; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .02em; text-align: center; color: #333; }
+  .tile.pulse { outline: 3px solid rgba(214,31,92,.5); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { outline-color: rgba(214,31,92,.1); } }
+  .update-row { margin: 0 14px 12px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; font-size: 14px; }
+  .update-row .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); flex: none; }
+  .bubbles { position: relative; height: 150px; overflow: hidden; }
+  .bubbles span { position: absolute; border-radius: 50%; opacity: .55; }
+
+  /* Scanner */
+  .tabs { flex: none; display: flex; background: #fff; height: 44px; align-items: center; }
+  .tabs div { flex: 1; display: flex; justify-content: center; }
+  .tabs div + div { border-left: 1px solid var(--line); height: 70%; align-items: center; }
+  .viewfinder { flex: 1; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+  .scanbox { position: relative; width: 240px; height: 240px; border-radius: 22px; overflow: hidden; background: #3a3530; border: 0; padding: 0; }
+  .scanbox .corners { position: absolute; inset: 0; pointer-events: none; }
+  .scanbox .corners i { position: absolute; width: 46px; height: 46px; border: 5px solid #fff; transition: border-color .2s; }
+  .scanbox.ok .corners i { border-color: #3ecf62; }
+  .corners i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 22px; }
+  .corners i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 22px; }
+  .corners i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 22px; }
+  .corners i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 22px; }
+  .mini-kiosk {
+    position: absolute; inset: 22px 34px; border-radius: 8px; border: 6px solid #2d2440;
+    background: linear-gradient(var(--kiosk), var(--kiosk-2)); color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; transform: rotate(-3deg);
+  }
+  .mini-kiosk b { font-size: 10px; font-weight: 500; }
+  .scan-hint { color: #fff; margin-top: 22px; font-size: 15px; opacity: .85; }
+  .absent-bar { flex: none; background: #fff; display: flex; align-items: center; justify-content: center; gap: 14px; padding: 12px; font-size: 13px; }
+  .absent-bar span.b { border: 1.5px solid var(--pink); color: var(--pink); border-radius: 999px; padding: 6px 16px; font-weight: 600; letter-spacing: .03em; }
+
+  /* QR glyph */
+  .qr { background: #fff; padding: 6px; border-radius: 3px; display: grid; }
+  .qr i { display: block; }
+
+  /* Check-in card */
+  .ci-card { margin: 12px 14px; padding: 14px; }
+  .ci-head { display: flex; gap: 12px; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .ci-head .n { font-size: 17px; font-weight: 600; }
+  .ci-head .s { color: var(--muted); font-size: 14px; }
+  .ci-meta { padding: 12px 0 18px; font-size: 14px; line-height: 1.9; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+
+  /* Success + handoff */
+  .success { margin: 12px 14px; padding: 18px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+  .success.compact { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 14px; }
+  .check-circle { width: 52px; height: 52px; border: 4px solid var(--green); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px; flex: none; }
+  .success.compact .check-circle { width: 34px; height: 34px; border-width: 3px; margin: 0; }
+  .handoff { margin: 0 14px 16px; padding: 16px 14px 8px; border-top: 4px solid var(--purple); }
+  .handoff h2 { margin: 0 0 2px; font-size: 18px; }
+  .handoff .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .opt {
+    display: flex; align-items: center; gap: 12px; width: 100%; background: #fff; border: 1.5px solid var(--line);
+    border-radius: 8px; padding: 13px 12px; margin-bottom: 8px; font-size: 16px; text-align: left; color: var(--text);
+  }
+  .opt .box { width: 22px; height: 22px; border-radius: 4px; border: 2px solid #9d9da6; flex: none; display: flex; align-items: center; justify-content: center; }
+  .opt.on { border-color: var(--purple); background: #f6eff9; }
+  .opt.on .box { background: var(--purple); border-color: var(--purple); }
+  .other-wrap { display: none; margin: -2px 0 10px; position: relative; }
+  .other-wrap.show { display: block; }
+  .other-wrap textarea {
+    width: 100%; min-height: 92px; border: 1.5px solid var(--purple); border-radius: 8px; padding: 10px 46px 10px 10px;
+    font: inherit; font-size: 16px; resize: vertical;
+  }
+  .mic { position: absolute; right: 8px; top: 8px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--purple); color: #fff; display: flex; align-items: center; justify-content: center; }
+  .mic.rec { background: var(--red); animation: pulse 1s infinite; }
+  .other-wrap .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Sent */
+  .sent { margin: 0 14px 14px; padding: 14px; }
+  .sent h3 { margin: 0 0 10px; font-size: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 13px; padding: 5px 10px; border-radius: 999px; background: #f1e9f5; color: var(--purple-dark); font-weight: 500; }
+  .chip.ai { background: var(--ai-bg); color: var(--ai); }
+  .quote { margin: 10px 0 0; padding: 10px 12px; border-left: 3px solid var(--line); color: #444; font-size: 14px; background: #fafafb; }
+  .seen { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 14px; color: var(--muted); }
+  .seen.yes { color: var(--green); font-weight: 600; }
+  .spinner { width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: var(--purple); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Push banner */
+  .push {
+    position: absolute; left: 10px; right: 10px; top: 8px; z-index: 40;
+    background: rgba(250,250,252,.97); border-radius: 16px; padding: 12px 14px; box-shadow: 0 8px 28px rgba(0,0,0,.25);
+    display: flex; gap: 10px; align-items: flex-start; font-size: 14px;
+    transform: translateY(-140%); transition: transform .35s ease;
+  }
+  .push.show { transform: translateY(0); }
+  .push .app-ic { width: 36px; height: 36px; border-radius: 9px; background: var(--purple); flex: none; display: flex; align-items: center; justify-content: center; }
+  .push .t { font-weight: 600; }
+  .push .meta { color: var(--muted); font-size: 12px; }
+
+  /* Toast */
+  .toast {
+    position: absolute; left: 12px; right: 12px; bottom: 90px; z-index: 40; background: #323232; color: #fff;
+    border-radius: 6px; padding: 12px 14px; font-size: 14px; opacity: 0; transform: translateY(10px); transition: all .25s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: none; }
+
+  /* Staff */
+  .staff-bar { background: #4f6f8f; }
+  .staff-label { font-size: 11px; background: rgba(255,255,255,.2); border-radius: 4px; padding: 2px 6px; margin-left: 4px; }
+  .section-h { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; margin: 18px 16px 8px; }
+  .row-card { margin: 0 14px 10px; padding: 14px; display: flex; gap: 12px; align-items: flex-start; width: calc(100% - 28px); border: 0; text-align: left; color: var(--text); }
+  .row-card .main { flex: 1; min-width: 0; }
+  .row-card .nm { font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .row-card .when { color: var(--muted); font-size: 13px; margin: 2px 0 8px; }
+  .row-card.needs-review { box-shadow: inset 4px 0 0 var(--ai), 0 1px 3px rgba(0,0,0,.12); }
+  .row-card .chev { align-self: center; color: #9a9aa3; flex: none; }
+  .review-flag { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; background: var(--ai-bg); color: var(--ai); font-size: 12.5px; font-weight: 700; padding: 5px 10px; border-radius: 999px; }
+  .reviewed { font-size: 12px; color: var(--muted); margin-top: 8px; display: flex; align-items: center; gap: 5px; }
+  .new-dot { width: 9px; height: 9px; background: var(--pink); border-radius: 50%; }
+  .block { margin: 0 14px 12px; padding: 14px; }
+  .block h3 { margin: 0 0 8px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .notified { margin: 12px 14px; padding: 10px 12px; background: var(--green-bg); color: #2e7d32; border-radius: 6px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  .ai-row { display: flex; gap: 8px; margin-top: 12px; }
+  .ai-row .btn { padding: 9px 10px; font-size: 14px; }
+  .ai-row .btn + .btn { margin-top: 0; }
+  .ai-note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .plan { border-left: 4px solid var(--purple); background: #faf7fc; border-radius: 4px; padding: 10px 12px; margin-top: 8px; }
+  .plan .k { font-weight: 600; font-size: 14px; }
+  .plan .v { font-size: 15px; margin-top: 3px; }
+  .plan .src { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Sheet */
+  .sheet-bg { position: absolute; inset: 0; background: rgba(0,0,0,.4); z-index: 30; display: none; align-items: flex-end; }
+  .sheet-bg.show { display: flex; }
+  .sheet { background: #fff; width: 100%; border-radius: 16px 16px 0 0; padding: 18px 16px calc(16px + env(safe-area-inset-bottom)); max-height: 85%; overflow: auto; }
+  .sheet h2 { font-size: 18px; margin: 0 0 4px; }
+  .sheet .sub { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+
+
+  /* Launcher */
+  .launch { padding: 20px 16px 30px; }
+  .launch h1 { font-size: 22px; margin: 4px 0 6px; }
+  .launch .lead { color: var(--muted); font-size: 15px; margin: 0 0 20px; line-height: 1.45; }
+  .scenario { display: block; width: 100%; text-align: left; border: 0; padding: 16px; margin-bottom: 12px; color: var(--text); }
+  .scenario .k { font-size: 12px; font-weight: 700; color: var(--purple); letter-spacing: .05em; text-transform: uppercase; }
+  .scenario .t { font-size: 17px; font-weight: 600; margin: 4px 0; }
+  .scenario .d { color: var(--muted); font-size: 14px; line-height: 1.4; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone" id="phone">
+    <div class="statusbar" id="statusbar"><span>8:14</span><span>●●●● 5G ▮</span></div>
+
+    <!-- Push notification (parent) -->
+    <div class="push" id="push">
+      <div class="app-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Z"/></svg></div>
+      <div><div class="meta">KT CONNECT · now</div><div class="t">Ms. Rivera saw your update</div><div><span data-child>Billy</span>'s morning update was seen by the care team.</div></div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <!-- ===== Launcher ===== -->
+    <section class="screen" data-id="launch">
+      <div class="appbar"><div class="center-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M4 18c2-1 3-4 3-7 0-3 2-6 6-6 2 0 3 1 3 2l3 1-2 2c0 4-2 6-4 7l1 3h-2l-1-2-2 1 1 2H8l-1-2c-1 0-2 0-3-1Z"/></svg>
+        Kangarootime</div><button class="info-btn" data-info aria-label="About this screen">i</button></div>
+      <div class="body launch">
+        <div class="pill grey">Concept prototype</div>
+        <h1>KT Connect check-in redesign</h1>
+        <p class="lead">A clickable prototype for a design critique. Pick a scenario. Names, school, and care plans are fictional.</p>
+        <button class="card scenario" data-go="home" data-reset>
+          <div class="k">Solution 1a</div><div class="t">Parent: check in + morning handoff</div>
+          <div class="d">Check in, then tell the care team how the morning went in a few taps.</div>
+        </button>
+        <button class="card scenario" data-go="staff-list">
+          <div class="k">Solutions 1b + 1c</div><div class="t">Care team: plan of action + AI</div>
+          <div class="d">Staff see the update, the plan for each item, and AI categories they can correct.</div>
+        </button>
+        <button class="card scenario" data-go="kiosk-dual">
+          <div class="k">Solution 2 · edge case</div><div class="t">Staff member who is also a parent</div>
+          <div class="d">Only asks when the app can't tell what you meant.</div>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===== Parent home (before) ===== -->
+    <section class="screen" data-id="home">
+      <div class="appbar">
+        <button class="icon-btn" data-go="launch" aria-label="Menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <div class="center-title"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M4 18c2-1 3-4 3-7 0-3 2-6 6-6 2 0 3 1 3 2l3 1-2 2c0 4-2 6-4 7l1 3h-2l-1-2-2 1 1 2H8l-1-2c-1 0-2 0-3-1Z"/></svg>Kangarootime</div>
+        <button class="info-btn" data-info aria-label="About this screen">i</button>
+      </div>
+      <div class="body">
+        <div style="background:#fff"><div class="home-date">Wednesday, October 7</div></div>
+        <div class="child-row"><div class="avatar">B</div><div><div class="child-name">Billy<br>Eng</div><div class="pill grey" data-status>Not checked in</div></div></div>
+        <div data-update-row></div>
+        <div class="tiles" data-tiles></div>
+        <div class="bubbles" data-bubbles></div>
+      </div>
+    </section>
+
+    <!-- ===== Scanner ===== -->
+    <section class="screen" data-id="scan">
+      <div class="appbar"><button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="title">Check In/Out</div><button class="info-btn" data-info aria-label="About this screen">i</button></div>
+      <div class="tabs"><div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2"><path d="M13 2 6 13h5l-1 9 7-11h-5l1-9ZM3 3l18 18"/></svg></div><div><svg width="16" height="20" viewBox="0 0 16 22" fill="#2e6fd1"><rect x="1" y="1" width="14" height="20" rx="3"/><circle cx="8" cy="16" r="1.6" fill="#fff"/></svg></div></div>
+      <div class="viewfinder">
+        <button class="scanbox" id="scanbox" aria-label="Scan the QR code">
+          <div class="mini-kiosk"><b>Check in or clock in</b><div class="qr" data-qr="17" data-size="96"></div></div>
+          <div class="corners"><i></i><i></i><i></i><i></i></div>
+        </button>
+        <div class="scan-hint">Tap the code to scan</div>
+      </div>
+      <div class="absent-bar">Absent Today? <span class="b">Go to bookings</span></div>
+    </section>
+
+    <!-- ===== Check-in card ===== -->
+    <section class="screen" data-id="checkin">
+      <div class="appbar"><button class="icon-btn" data-back aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="title">Check In/Out</div><button class="info-btn" data-info aria-label="About this screen">i</button></div>
+      <div class="body">
+        <div class="greeting">Good Morning, <span data-parent>Brian</span></div>
+        <div class="card ci-card">
+          <div class="ci-head"><div class="avatar sm">B</div><div><div class="n">Billy Eng</div><div class="s">Sunrise Montessori School</div></div></div>
+          <div class="ci-meta"><div>📅 <b>Day:</b> October 7, 2026</div><div>🚪 <b>Class:</b> Primary A</div></div>
+          <button class="btn" data-go="handoff">Check In</button>
+          <button class="btn outline">Report Absent</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Success + handoff (NEW) ===== -->
+    <section class="screen" data-id="handoff">
+      <div class="appbar"><button class="icon-btn" data-go="home" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="title">Check In/Out</div><button class="info-btn" data-info aria-label="About this screen">i</button></div>
+      <div class="body">
+        <div class="greeting">Good Morning, <span data-parent>Brian</span></div>
+        <div class="card success compact">
+          <div class="check-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#43a047" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
+          <div><b style="color:#333" data-child>Billy</b> was successfully checked in at 8:14 AM.</div>
+        </div>
+        <div class="card handoff">
+          <h2>How's <span data-child>Billy</span> this morning?</h2>
+          <p class="sub">Optional. Goes straight to <span data-child>Billy</span>'s care team. Tap all that apply.</p>
+          <div data-options></div>
+          <div class="other-wrap" id="otherWrap">
+            <textarea id="otherText" placeholder="Tell the team in your own words, or tap the mic"></textarea>
+            <button class="mic" id="mic" aria-label="Dictate"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4" stroke="#fff" stroke-width="2" fill="none"/></svg></button>
+            <div class="hint">Your exact words go to the team.</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><button class="btn" id="sendBtn">Finish</button></div>
+    </section>
+
+    <!-- ===== Parent home (after) ===== -->
+    <section class="screen" data-id="home2">
+      <div class="appbar">
+        <button class="icon-btn" data-go="launch" aria-label="Menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <div class="center-title"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M4 18c2-1 3-4 3-7 0-3 2-6 6-6 2 0 3 1 3 2l3 1-2 2c0 4-2 6-4 7l1 3h-2l-1-2-2 1 1 2H8l-1-2c-1 0-2 0-3-1Z"/></svg>Kangarootime</div>
+        <button class="info-btn" data-info aria-label="About this screen">i</button>
+      </div>
+      <div class="body">
+        <div style="background:#fff"><div class="home-date">Wednesday, October 7</div></div>
+        <div class="child-row"><div class="avatar" data-initial>B</div><div><div class="child-name"><span data-child>Billy</span><br><span data-last>Eng</span></div><div class="pill green">Checked In</div></div></div>
+        <div style="height:12px"></div>
+        <div data-home-update></div>
+        <div class="tiles" data-tiles></div>
+      </div>
+    </section>
+
+    <!-- ===== Staff: list ===== -->
+    <section class="screen" data-id="staff-list">
+      <div class="appbar staff-bar"><button class="icon-btn" data-go="launch" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="title">Primary A <span class="staff-label">STAFF</span></div><button class="info-btn" data-info aria-label="About this screen">i</button></div>
+      <div class="body">
+        <div data-staff-list></div>
+      </div>
+    </section>
+
+    <!-- ===== Staff: detail ===== -->
+    <section class="screen" data-id="staff-detail">
+      <div class="appbar staff-bar"><button class="icon-btn" data-go="staff-list" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="title"><span data-detail-child>Billy</span>'s morning <span class="staff-label">STAFF</span></div><button class="info-btn" data-info aria-label="About this screen">i</button></div>
+      <div class="body">
+        <div class="notified"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg> <span data-detail-from>Brian</span> was notified that you saw this.</div>
+        <div data-staff-detail></div>
+      </div>
+      <div class="sheet-bg" id="fixSheet">
+        <div class="sheet">
+          <h2>Change categories</h2>
+          <p class="sub">Pick what <span data-detail-parent>Billy's dad</span> actually meant. Your correction updates the plan and improves future suggestions.</p>
+          <div data-fix-options></div>
+          <button class="btn" id="saveFix">Save correction</button>
+          <button class="btn ghost" id="cancelFix">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Kiosk: staff who is also a parent ===== -->
+    <section class="screen" data-id="kiosk-dual">
+      <div class="appbar"><button class="icon-btn" data-go="launch" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="title">Check In/Out</div><button class="info-btn" data-info aria-label="About this screen">i</button></div>
+      <div class="tabs"><div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2"><path d="M13 2 6 13h5l-1 9 7-11h-5l1-9ZM3 3l18 18"/></svg></div><div><svg width="16" height="20" viewBox="0 0 16 22" fill="#2e6fd1"><rect x="1" y="1" width="14" height="20" rx="3"/><circle cx="8" cy="16" r="1.6" fill="#fff"/></svg></div></div>
+      <div class="viewfinder">
+        <button class="scanbox ok" aria-label="Scanned"><div class="mini-kiosk"><b>Check in or clock in</b><div class="qr" data-qr="17" data-size="96"></div></div><div class="corners"><i></i><i></i><i></i><i></i></div></button>
+      </div>
+      <div class="sheet-bg show">
+        <div class="sheet">
+          <h2>Good morning, Dana</h2>
+          <p class="sub">You're signed in as staff and as Maya's parent. What would you like to do?</p>
+          <button class="btn" data-dual="staff">Clock in for my shift</button>
+          <button class="btn outline" data-dual="parent">Check in Maya</button>
+          <p class="sub" style="margin:12px 0 0;font-size:12px">The app only asks when one account has both roles. Everyone else skips this step.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Dual result ===== -->
+    <section class="screen" data-id="dual-done">
+      <div class="appbar"><button class="icon-btn" data-go="launch" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><div class="title">Check In/Out</div><button class="info-btn" data-info aria-label="About this screen">i</button></div>
+      <div class="body">
+        <div class="greeting">Good Morning, Dana</div>
+        <div class="card success">
+          <div class="check-circle"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#43a047" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>
+          <div id="dualMsg"></div>
+        </div>
+      </div>
+      <div class="footer"><button class="btn" data-go="launch">Finish</button></div>
+    </section>
+  </div>
+
+  <aside class="notes" id="notes">
+    <h1>KT Connect check-in redesign</h1>
+    <p class="by">Design critique prototype · Brian Eng</p>
+    <div class="tag" id="noteTag"></div>
+    <div class="note-title" id="noteTitle"></div>
+    <p id="noteBody"></p>
+    <button class="restart" data-go="launch">All scenarios</button>
+  </aside>
+</div>
+
+<script>
+const OPTIONS = [
+  { id: 'sleep',   label: 'Poor sleep',          plan: 'Allow additional sensory breaks.' },
+  { id: 'aggr',    label: 'Physical aggression', plan: 'Keep an aide close during transitions and group play.' },
+  { id: 'ill',     label: 'Illness',             plan: 'Check temperature on arrival, watch for symptoms, and call the parent if they get worse.' },
+  { id: 'tantrum', label: 'Tantrum',             plan: 'Give extra warnings before transitions. Offer the calm-down corner early.' },
+];
+const OTHER = { id: 'other', label: 'Other' };
+const byId = Object.fromEntries(OPTIONS.map(o => [o.id, o]));
+
+// Stand-in for the AI categorizer: maps free text to the existing options.
+const RULES = [
+  ['sleep',   /\b(sleep|slept|groggy|tired|exhausted|woke|up all night|nap)/i],
+  ['aggr',    /\b(hit|hitting|lash|kick|bit|biting|push|aggress)/i],
+  ['ill',     /\b(sick|fever|cough|cold|vomit|threw up|throwing up|runny nose|stomach|ill)\b/i],
+  ['tantrum', /\b(tantrum|meltdown|cranky|scream|crying|upset)/i],
+];
+const categorize = text => RULES.filter(([, re]) => re.test(text)).map(([id]) => id);
+
+const DEFAULT_OTHER = "The storm last night scared Billy a lot. He's really groggy this morning and prone to lashing out.";
+
+const state = { child: 'Billy', last: 'Eng', parent: 'Brian', hasUpdate: false, version: 0, selected: new Set(), otherText: '', aiTags: [], submitted: false };
+
+function resetParent(child = 'Billy', parent = 'Brian', last = 'Eng') {
+  state.child = child; state.parent = parent; state.last = last; state.hasUpdate = false;
+  state.selected = new Set(); state.otherText = ''; state.aiTags = [];
+  state.submitted = false;
+  document.getElementById('otherText').value = '';
+}
+
+/* ---------- Care team's view: one entry per child ---------- */
+const SEEDED_NOTE = "The storm last night scared Leo a lot. He's really groggy this morning and prone to lashing out.";
+const staff = {
+  current: 'leo',
+  entries: {
+    leo: { key: 'leo', child: 'Leo', last: 'R.', from: 'Sam', rel: 'mom', time: '8:09 AM', color: 'linear-gradient(135deg,#b39ddb,#7e57c2)',
+           selected: new Set(['other']), otherText: SEEDED_NOTE, aiTags: categorize(SEEDED_NOTE), review: 'pending', seen: false },
+    ava: { key: 'ava', child: 'Ava', last: 'M.', from: 'Priya', rel: 'mom', time: '8:02 AM', color: 'linear-gradient(135deg,#7fc6e8,#4f8fd1)',
+           selected: new Set(['tantrum']), otherText: '', aiTags: [], review: null, seen: true },
+  },
+};
+// Billy's entry mirrors the parent flow. Without one, show a simple option-only update.
+function syncBilly() {
+  const v = state.submitted ? state.version : 0;
+  if (staff.entries.billy?.version === v) return;
+  staff.entries.billy = {
+    key: 'billy', child: 'Billy', last: 'E.', from: 'Brian', rel: 'dad', time: '8:14 AM', color: '', version: v,
+    selected: state.submitted ? new Set(state.selected) : new Set(['sleep']),
+    otherText: state.submitted ? state.otherText : '',
+    aiTags: state.submitted ? [...state.aiTags] : [],
+    review: state.submitted && state.otherText ? 'pending' : null, seen: false,
+  };
+}
+const needsReview = e => !!e.otherText && e.review === 'pending';
+
+/* ---------- Notes per screen ---------- */
+const NOTES = {
+  'launch':      ['Overview', 'Check-in as a handoff of care', 'Solution 1 turns check-in into a handoff of care: a quick structured update for the care team, a plan of action for each item, and AI for free text. The last scenario covers a staff member who is also a parent.'],
+  'home':        ['Current app', 'Home', 'Unchanged from today\'s app. Tap CHECK IN/OUT.'],
+  'scan':        ['Current app', 'Scan the kiosk code', 'Tap the code to scan.'],
+  'checkin':     ['Current app', 'Confirm check-in', 'Unchanged from today\'s app.'],
+  'handoff':     ['Solution 1a', 'Check-in becomes a handoff', 'Today this screen ends at "Finish." Now the parent can pass along how the morning went in a few taps. It sits in the one flow every parent completes daily, so it needs no new habit. Tapping options is faster than typing. "Other" opens free text or dictation for anything the list doesn\'t cover. Try "Other" to see the AI categorization on the staff side.'],
+  'home2':       ['Solution 1a', 'Closing the loop on home', 'No extra confirmation screen. The parent lands back on home, which shows exactly what was sent and then when someone on the care team has read it. That answers the drop-off worry: did they actually get it?'],
+  'staff-list':  ['Solutions 1b + 1c', 'The care team\'s morning view', 'Updates arrive in the staff app and stay there until the team is ready, so they don\'t depend on the right person being at the door during drop-off. Notes the AI sorted are flagged at the top until a staff member confirms them. Tap Leo\'s update to review it.'],
+  'staff-detail':['Solutions 1b + 1c', 'Plan of action + AI categories', 'Each option maps to a plan the care team wrote for this child (1b). Free text is categorized by AI into the same options, and staff always see the parent\'s original words (1c). Staff confirm or correct in one tap. Corrections improve future categorization.'],
+  'kiosk-dual':  ['Solution 2 · edge case', 'Only ask when it\'s truly ambiguous', 'A staff member whose own child attends the center has both roles on one account. Only then does the app ask which action they meant. Choosing to check in their child leads to the same morning update as every other parent.'],
+  'dual-done':   ['Solution 2 · edge case', 'Done', 'One question, then straight to the right flow.'],
+};
+function setNotes(id) {
+  const n = NOTES[id] || NOTES.launch;
+  document.getElementById('noteTag').textContent = n[0];
+  document.getElementById('noteTitle').textContent = n[1];
+  document.getElementById('noteBody').textContent = n[2];
+}
+
+/* ---------- Navigation ---------- */
+const navStack = [];
+let current = null;
+const pushTimer = { id: null };
+function go(id, { record = true } = {}) {
+  if (current && record) navStack.push(current);
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.dataset.id === id));
+  current = id;
+  const staff = id.startsWith('staff');
+  const bar = document.getElementById('statusbar');
+  bar.style.background = staff ? '#4f6f8f' : 'var(--purple)';
+  document.getElementById('notes').classList.remove('open');
+  setNotes(id);
+  const s = document.querySelector(`.screen[data-id="${id}"] .body`); if (s) s.scrollTop = 0;
+  onEnter[id]?.();
+}
+function back() { const prev = navStack.pop(); if (prev) go(prev, { record: false }); }
+
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-go]');
+  if (g) { if (g.hasAttribute('data-reset')) resetParent(); go(g.dataset.go); return; }
+  if (e.target.closest('[data-back]')) { back(); return; }
+  if (e.target.closest('[data-info]')) { document.getElementById('notes').classList.toggle('open'); return; }
+  if (e.target.closest('#notes') === null && document.getElementById('notes').classList.contains('open')) document.getElementById('notes').classList.remove('open');
+});
+
+/* ---------- Rendering helpers ---------- */
+const check = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>';
+const wand = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 21 14 10"/><path d="M15 3v4M13 5h4M20 9v3M18.5 10.5h3M19.5 2.5v2M18.5 3.5h2"/></svg>';
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function optionButton(o, on, attr) {
+  return `<button class="opt ${on ? 'on' : ''}" ${attr}="${o.id}"><span class="box">${on ? check : ''}</span>${o.label}</button>`;
+}
+function renderOptions() {
+  document.querySelector('[data-options]').innerHTML =
+    [...OPTIONS, OTHER].map(o => optionButton(o, state.selected.has(o.id), 'data-opt')).join('');
+  document.getElementById('otherWrap').classList.toggle('show', state.selected.has('other'));
+  const any = state.selected.size > 0;
+  const btn = document.getElementById('sendBtn');
+  btn.textContent = any ? `Send to ${state.child}'s team` : 'Finish';
+  btn.disabled = state.selected.size === 1 && state.selected.has('other') && !document.getElementById('otherText').value.trim();
+}
+document.querySelector('[data-options]').addEventListener('click', e => {
+  const b = e.target.closest('[data-opt]'); if (!b) return;
+  const id = b.dataset.opt;
+  state.selected.has(id) ? state.selected.delete(id) : state.selected.add(id);
+  renderOptions();
+  if (id === 'other' && state.selected.has('other')) document.getElementById('otherText').focus();
+});
+document.getElementById('otherText').addEventListener('input', renderOptions);
+
+// Fake dictation: types the example sentence into the box.
+document.getElementById('mic').addEventListener('click', () => {
+  const mic = document.getElementById('mic'), ta = document.getElementById('otherText');
+  if (mic.classList.contains('rec')) return;
+  mic.classList.add('rec'); ta.value = ''; let i = 0;
+  const t = setInterval(() => {
+    ta.value = DEFAULT_OTHER.slice(0, i += 3);
+    if (i >= DEFAULT_OTHER.length) { clearInterval(t); ta.value = DEFAULT_OTHER; mic.classList.remove('rec'); renderOptions(); }
+  }, 30);
+});
+
+document.getElementById('sendBtn').addEventListener('click', () => {
+  if (state.selected.size === 0) { state.submitted = false; state.hasUpdate = false; go('home2'); return; }
+  state.otherText = state.selected.has('other') ? document.getElementById('otherText').value.trim() : '';
+  if (state.selected.has('other') && !state.otherText) state.selected.delete('other');
+  state.aiTags = state.otherText ? categorize(state.otherText) : [];
+  state.submitted = state.child === 'Billy'; state.version++; state.hasUpdate = true;
+  go('home2');
+  toast(`Sent to ${state.child}'s care team`);
+});
+
+function applyNames() {
+  document.querySelectorAll('[data-child]').forEach(el => el.textContent = state.child);
+  document.querySelectorAll('[data-parent]').forEach(el => el.textContent = state.parent);
+  document.querySelectorAll('[data-last]').forEach(el => el.textContent = state.last);
+  document.querySelectorAll('[data-initial]').forEach(el => el.textContent = state.child[0]);
+}
+function sentChips() {
+  return [...state.selected].filter(id => id !== 'other').map(id => `<span class="chip">${byId[id].label}</span>`).join('')
+    + (state.otherText ? '<span class="chip">Note</span>' : '');
+}
+
+/* ---------- Screen hooks ---------- */
+const onEnter = {
+  home() {
+    document.querySelectorAll('[data-tiles]').forEach(renderTiles);
+    document.querySelector('[data-tiles]').firstElementChild.classList.add('pulse');
+    document.querySelector('[data-tiles]').firstElementChild.dataset.go = 'scan';
+  },
+  scan() {
+    const box = document.getElementById('scanbox'); box.classList.remove('ok');
+    box.onclick = () => { box.classList.add('ok'); setTimeout(() => go('checkin'), 550); };
+  },
+  handoff() { applyNames(); renderOptions(); },
+  home2() {
+    applyNames();
+    document.querySelectorAll('[data-tiles]').forEach(renderTiles);
+    const el = document.querySelector('[data-home-update]');
+    clearTimeout(pushTimer.id);
+    if (!state.hasUpdate) {
+      el.innerHTML = '<div class="card update-row"><span class="dot" style="background:#bbb"></span><div>No morning update today</div></div>';
+      return;
+    }
+    el.innerHTML = `<div class="card sent"><h3>Morning update sent to ${state.child}'s care team</h3>
+      <div class="chips">${sentChips()}</div>
+      ${state.otherText ? `<div class="quote">"${esc(state.otherText)}"</div>` : ''}
+      <div class="seen" id="seen"><div class="spinner"></div> Not seen yet</div></div>`;
+    pushTimer.id = setTimeout(() => {
+      if (current !== 'home2') return;
+      const seen = document.getElementById('seen'), push = document.getElementById('push');
+      seen.className = 'seen yes';
+      seen.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#43a047" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg> Seen by Ms. Rivera · 8:16 AM';
+      push.classList.add('show'); setTimeout(() => push.classList.remove('show'), 3200);
+    }, 2600);
+  },
+  'staff-list'() { syncBilly(); renderStaffList(); },
+  'staff-detail'() {
+    const e = staff.entries[staff.current]; e.seen = true;
+    document.querySelector('[data-detail-child]').textContent = e.child;
+    document.querySelector('[data-detail-from]').textContent = e.from;
+    document.querySelector('[data-detail-parent]').textContent = `${e.child}'s ${e.rel}`;
+    renderStaffDetail();
+  },
+  'kiosk-dual'() {},
+};
+
+function renderTiles(el) {
+  const T = [
+    ['Check<br>In/Out', '#5aa7e8', '<path d="M12 3v18M6 7h10l2 2-2 2H6zM18 13H8l-2 2 2 2h10z" fill="#fff"/>'],
+    ['Attendance', '#3fb1a5', '<rect x="5" y="5" width="14" height="14" rx="2" fill="#fff"/><path d="M8 12l3 3 5-6" stroke="#3fb1a5" stroke-width="2" fill="none"/>'],
+    ['Gallery', '#ef7b7b', '<rect x="4" y="6" width="16" height="12" rx="2" fill="#fff"/><path d="M6 16l4-4 3 3 2-2 3 3" stroke="#ef7b7b" stroke-width="2" fill="none"/>'],
+    ['Activity<br>Feed', '#2f6f9f', '<rect x="5" y="5" width="14" height="14" rx="2" fill="#fff"/><path d="M8 9h8M8 12h8M8 15h5" stroke="#2f6f9f" stroke-width="2"/>'],
+    ['Billing', '#b48be0', '<path d="M7 4h8l3 3v13H7z" fill="#fff"/><text x="12.5" y="16" font-size="8" text-anchor="middle" fill="#b48be0" font-weight="700">$</text>'],
+    ['Account<br>Messaging', '#8e5bb0', '<path d="M5 6h14v9H10l-4 3v-3H5z" fill="#fff"/>'],
+  ];
+  el.innerHTML = T.map(([l, c, p]) => `<button class="tile"><span class="ic" style="background:${c}"><svg width="20" height="20" viewBox="0 0 24 24">${p}</svg></span><span class="lbl">${l}</span></button>`).join('');
+}
+
+function staffRow(e) {
+  const canned = [...e.selected].filter(id => id !== 'other');
+  const ai = e.aiTags.filter(id => !canned.includes(id));
+  const chips = canned.map(id => `<span class="chip">${byId[id].label}</span>`)
+    .concat(ai.map(id => `<span class="chip ai">${wand} ${byId[id].label}</span>`))
+    .concat(e.otherText && !e.aiTags.length ? ['<span class="chip ai">Note</span>'] : []);
+  const status = needsReview(e)
+    ? `<div class="review-flag">${wand} AI-sorted · Tap to confirm</div>`
+    : e.otherText ? `<div class="reviewed">${wand} AI categories ${e.review === 'corrected' ? 'corrected' : 'confirmed'} by you</div>` : '';
+  return `<button class="card row-card ${needsReview(e) ? 'needs-review' : ''}" data-entry="${e.key}">
+    <div class="avatar sm" ${e.color ? `style="background:${e.color}"` : ''}>${e.child[0]}</div>
+    <div class="main">
+      <div class="nm">${e.child} ${e.last} ${e.seen ? '' : '<span class="new-dot"></span>'}</div>
+      <div class="when">Checked in ${e.time} · from ${e.from} (${e.rel})</div>
+      <div class="chips">${chips.join('')}</div>${status}
+    </div>
+    <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>
+  </button>`;
+}
+function renderStaffList() {
+  const all = [staff.entries.leo, staff.entries.billy, staff.entries.ava];
+  const review = all.filter(needsReview), rest = all.filter(e => !needsReview(e));
+  let html = '';
+  if (review.length) html += `<div class="section-h" style="color:var(--ai)">Needs your review (${review.length})</div>` + review.map(staffRow).join('');
+  html += `<div class="section-h">Morning updates from families</div>` + rest.map(staffRow).join('');
+  html += `<div class="section-h">No updates</div>
+    <div class="card row-card" style="opacity:.7"><div class="avatar sm" style="background:linear-gradient(135deg,#9ccc65,#5b9a3a)">J</div>
+    <div class="main"><div class="nm">Jonah K.</div><div class="when">Checked in 7:55 AM · no update</div></div></div>`;
+  document.querySelector('[data-staff-list]').innerHTML = html;
+}
+document.querySelector('[data-staff-list]').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-entry]'); if (!b) return;
+  staff.current = b.dataset.entry; go('staff-detail');
+});
+
+function renderStaffDetail() {
+  const e = staff.entries[staff.current];
+  const canned = [...e.selected].filter(id => id !== 'other');
+  const ai = e.aiTags.filter(id => !canned.includes(id));
+  const all = [...canned, ...ai];
+  let html = `<div class="card block"><h3>From ${e.from} (${e.child}'s ${e.rel}) · ${e.time}</h3>`;
+  if (canned.length) html += `<div class="chips">${canned.map(id => `<span class="chip">${byId[id].label}</span>`).join('')}</div>`;
+  if (e.otherText) html += `<div class="quote">"${esc(e.otherText)}"</div>`;
+  html += `</div>`;
+  if (e.otherText) {
+    const label = e.review === 'corrected' ? 'Categories (corrected by you)' : e.review === 'confirmed' ? 'AI categories (confirmed)' : 'AI-suggested categories · needs review';
+    html += `<div class="card block"><h3 style="color:var(--ai)">${wand} ${label}</h3>`;
+    html += e.aiTags.length
+      ? `<div class="chips">${e.aiTags.map(id => `<span class="chip ai">${byId[id].label}</span>`).join('')}</div>`
+      : `<div style="font-size:14px;color:var(--muted)">No option fits this note. Pick one if it applies.</div>`;
+    if (e.review === 'pending') {
+      html += `<div class="ai-row"><button class="btn" id="aiOk">Looks right</button><button class="btn outline" id="aiFix">Change</button></div>`;
+      html += `<div class="ai-note">The parent's words above are always shown. AI only suggests categories.</div>`;
+    } else {
+      html += `<div class="ai-note">${e.review === 'corrected' ? 'Thanks. Your correction will improve future suggestions.' : 'Confirmed. Thanks.'}</div>`;
+    }
+    html += `</div>`;
+  }
+  if (all.length) {
+    html += `<div class="section-h" style="margin-top:6px">Plan of action</div><div class="card block">`;
+    html += all.map(id => `<div class="plan"><div class="k">${byId[id].label}</div><div class="v">${byId[id].plan}</div><div class="src">From ${e.child}'s care plan · set by the care team</div></div>`).join('');
+    html += `</div>`;
+  }
+  document.querySelector('[data-staff-detail]').innerHTML = html;
+  document.getElementById('aiOk')?.addEventListener('click', () => { e.review = 'confirmed'; renderStaffDetail(); toast('Confirmed. Thanks for checking.'); });
+  document.getElementById('aiFix')?.addEventListener('click', openFix);
+}
+
+let fixSel = new Set();
+function openFix() {
+  fixSel = new Set(staff.entries[staff.current].aiTags);
+  renderFix();
+  document.getElementById('fixSheet').classList.add('show');
+}
+function renderFix() {
+  document.querySelector('[data-fix-options]').innerHTML = OPTIONS.map(o => optionButton(o, fixSel.has(o.id), 'data-fix')).join('');
+}
+document.querySelector('[data-fix-options]').addEventListener('click', e => {
+  const b = e.target.closest('[data-fix]'); if (!b) return;
+  const id = b.dataset.fix; fixSel.has(id) ? fixSel.delete(id) : fixSel.add(id); renderFix();
+});
+document.getElementById('saveFix').addEventListener('click', () => {
+  Object.assign(staff.entries[staff.current], { aiTags: [...fixSel], review: 'corrected' });
+  document.getElementById('fixSheet').classList.remove('show');
+  renderStaffDetail(); toast('Saved. The plan of action is updated.');
+});
+document.getElementById('cancelFix').addEventListener('click', () => document.getElementById('fixSheet').classList.remove('show'));
+
+document.querySelectorAll('[data-dual]').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.dual === 'parent') { resetParent('Maya', 'Dana', 'Lee'); go('handoff'); return; }
+  document.getElementById('dualMsg').innerHTML = '<b style="color:#333">You</b> clocked in at 8:14 AM.';
+  go('dual-done');
+}));
+
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ---------- Decorative QR codes + bubbles ---------- */
+function drawQR(el) {
+  const n = +el.dataset.qr, size = +(el.dataset.size || 180), cell = size / n;
+  let seed = n * 7919;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const finder = (r, c) => {
+    for (const [fr, fc] of [[0, 0], [0, n - 7], [n - 7, 0]]) {
+      const y = r - fr, x = c - fc;
+      if (y >= 0 && y < 7 && x >= 0 && x < 7) return (y === 0 || y === 6 || x === 0 || x === 6 || (y >= 2 && y <= 4 && x >= 2 && x <= 4)) ? 1 : 0;
+    }
+    return null;
+  };
+  el.style.gridTemplateColumns = `repeat(${n}, ${cell}px)`;
+  let h = '';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const f = finder(r, c); const on = f === null ? rnd() > 0.52 : f;
+    h += `<i style="width:${cell}px;height:${cell}px;background:${on ? '#111' : '#fff'}"></i>`;
+  }
+  el.innerHTML = h;
+}
+document.querySelectorAll('[data-qr]').forEach(drawQR);
+document.querySelectorAll('[data-bubbles]').forEach(el => {
+  const B = [[-20, 10, 60, '#c9a6e6'], [50, 30, 26, '#f4a8a8'], [150, 20, 90, '#f08aa8'], [10, 70, 80, '#a9c5e8'], [100, 80, 46, '#c9a6e6'], [260, 70, 70, '#d2b4ee'], [220, 110, 20, '#f4a8a8']];
+  el.innerHTML = B.map(([x, y, s, c]) => `<span style="left:${x}px;top:${y}px;width:${s}px;height:${s}px;background:${c}"></span>`).join('');
+});
+
+go('launch', { record: false });
+</script>
+</body>
+</html>
